@@ -9,14 +9,13 @@ using OpenAI.Console.Services.Location;
 using OpenAI.Console.Services.HomeAssistant;
 namespace OpenAI.Console.Tools;
 
-internal partial class ToolBelt(LocationService locationService, WeatherService WeatherService, HomeAssistantService homeAssistantService)
+internal class ToolBelt(LocationService locationService, WeatherService WeatherService, HomeAssistantService homeAssistantService)
 {
-    public static IEnumerable<ChatTool> GetTools()
+    public IEnumerable<ChatTool> GetTools()
     {
 
         var methods = typeof(ToolBelt).GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
               .Where(m => m.GetCustomAttributes(typeof(ToolAttribute), false).Length > 0);
-
 
         foreach (var method in methods)
         {
