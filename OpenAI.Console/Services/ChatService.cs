@@ -15,9 +15,9 @@ internal class ChatService : IStart
     private readonly ChatClient? _client = null;
     private readonly ChatCompletionOptions _chatCompletionOptions = new();
 
-    public ChatService(ToolBelt toolBelt, 
-        Voice voice, 
-        SpeechRecognition speechRecognition, 
+    public ChatService(ToolBelt toolBelt,
+        Voice voice,
+        SpeechRecognition speechRecognition,
         IOptions<OpenAIConfiguration> openAIConfiguration)
     {
         ArgumentNullException.ThrowIfNull(openAIConfiguration.Value.Key);
@@ -33,7 +33,7 @@ internal class ChatService : IStart
 
         var sp = File.ReadAllText("SystemPrompt.txt");
 
-        _messages =  [new SystemChatMessage(sp)];
+        _messages = [new SystemChatMessage(sp)];
 
         _chatCompletionOptions.Tools.AddRange(toolBelt.GetTools());
 
@@ -41,10 +41,11 @@ internal class ChatService : IStart
         {
             Console.Write(e);
             await Chat(e);
-        };        
+        };
     }
 
-    public async Task Start() {
+    public async Task Start()
+    {
 
         Console.Write("[USER]: ");
 
@@ -81,9 +82,9 @@ internal class ChatService : IStart
                     Console.WriteLine($"{responseText}");
                     Console.ForegroundColor = oldConsoleColor;
 
-             //       await _speechRecognition.StopListening();
-            //        await _voice.Say(responseText);
-             //       await _speechRecognition.StartListening();
+                    await _speechRecognition.StopListening();
+                    await _voice.Say(responseText);
+                    await _speechRecognition.StartListening();
 
                     Console.Write("[USER]: ");
                     break;

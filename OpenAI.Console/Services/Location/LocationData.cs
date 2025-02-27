@@ -9,7 +9,7 @@ public record LocationInfo(
 )
 {
     public override string ToString() => JsonSerializer.Serialize(this);
-    
+
 }
 
 public record Localization(

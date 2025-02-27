@@ -2,13 +2,13 @@
 
 internal class LocationService()
 {
-    public  Task<LocationInfo> GetLocationData() => Task.FromResult( new LocationInfo(
+    public Task<LocationInfo> GetLocationData() => Task.FromResult(new LocationInfo(
             Ip: string.Empty,
             IsEuropeanUnion: false,
             L10n: new Localization(
                 CurrencyName: "Pound",
-                CurrencyCode: "GBP", 
-                CurrencySymbol:"£",
+                CurrencyCode: "GBP",
+                CurrencySymbol: "£",
                 LangCodes: ["en-GB"]),
             LocationData: new LocationData(
                 CountryName: "United Kingdom",

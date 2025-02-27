@@ -17,7 +17,7 @@ public static class ExtensionMethods
         await task.ConfigureAwait(false);
 
         var resultProperty = task.GetType().GetProperty("Result");
-        
+
         return resultProperty?.GetValue(task);
     }
 
@@ -29,7 +29,7 @@ public static class ExtensionMethods
         }
     }
 
-    public static Task RunService<TService>(this IHost host) where TService: IStart  
+    public static Task RunService<TService>(this IHost host) where TService : IStart
         => host.Services.GetRequiredService<TService>().Start();
 
 }

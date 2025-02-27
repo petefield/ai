@@ -80,7 +80,7 @@ internal class ToolBelt(LocationService locationService, WeatherService WeatherS
     public async Task<string> GetCurrentLocation()
         => (await locationService.GetLocationData()).ToString();
 
-   
+
     [Tool("Get the user's current location")]
     public async Task<string> GetCurrentWeather(
         [ToolParameter("The latitude for which the current weather needs to be determined")] string latitude,
@@ -88,7 +88,7 @@ internal class ToolBelt(LocationService locationService, WeatherService WeatherS
         => (await WeatherService.GetWeatherData(latitude, longditude)).ToString();
 
     [Tool("Calls a home automation service")]
-    public  async Task<string> CallHomeAutomationService(
+    public async Task<string> CallHomeAutomationService(
         [ToolParameter("The id of the entity on which to perform the service. Entities can be determined by calling the 'GetHomeStates' tool. This entity id should include the domain")] string entity,
         [ToolParameter("The Domain to which the entity belongs ")] string entityDomain,
         [ToolParameter("The name of the service to call. Service names can be determined by calling the 'GetHomeServices' tool ")] string serviceName)

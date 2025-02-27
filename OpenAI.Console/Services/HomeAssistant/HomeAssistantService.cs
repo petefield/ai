@@ -11,13 +11,14 @@ internal class HomeAssistantService
     public HomeAssistantService()
     {
         instance = new Instance(new Uri("http://pippin:8123"), "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZjQxNjM1ZDZiMjE0ZGViODYzYjMyZjQ1ODgwZDIwYyIsImlhdCI6MTc0MDQxMTg1MiwiZXhwIjoyMDU1NzcxODUyfQ.pQip37QkKCEc3WZnVwvV7HYZ2OwGWRoh-yvrj2O3LsY");
- 
+
         instance.IgnoreCertificatErrors = true;
     }
 
-    public async Task<string> GetConfig() { 
-    
-   
+    public async Task<string> GetConfig()
+    {
+
+
         // Get a source
         var cfgSource = instance.Get<Simple.HAApi.Sources.Configuration>();
         // Get info as needed
@@ -44,11 +45,12 @@ internal class HomeAssistantService
         // Get a source
         var statesSource = instance.Get<Simple.HAApi.Sources.States>();
         var all = await statesSource.GetStatesAsync();
-        var r = all.Select(x => new { 
-            x.Domain, 
-            x.EntityId, 
-            x.State, 
-            x.FriendlyName, 
+        var r = all.Select(x => new
+        {
+            x.Domain,
+            x.EntityId,
+            x.State,
+            x.FriendlyName,
         }).ToArray();
         var s = JsonConvert.SerializeObject(r);
         return s;

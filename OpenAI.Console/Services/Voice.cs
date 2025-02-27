@@ -4,10 +4,23 @@ using OpenAI.Console.Configuration;
 
 namespace SpeechToText;
 
-internal class Voice(IOptions<SpeechConfiguration> config)
+internal class Voice
 {
-    private readonly SpeechSynthesizer _speechSynthesizer =
-        new(SpeechConfig.FromSubscription(config.Value.Key, config.Value.Region));
+    private readonly SpeechSynthesizer _speechSynthesizer;
+
+
+    public Voice(IOptions<SpeechConfiguration> config)
+    {
+        var speechConfig = SpeechConfig.FromSubscription(config.Value.Key, config.Value.Region);
+
+        speechConfig.SpeechSynthesisVoiceName = "Pete Field_20250227_8588";
+
+        _speechSynthesizer = new SpeechSynthesizer(speechConfig);
+
+    }
+
+
+
 
     public async Task Say(string text)
     {
