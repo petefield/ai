@@ -8,19 +8,15 @@ internal class Voice
 {
     private readonly SpeechSynthesizer _speechSynthesizer;
 
-
     public Voice(IOptions<SpeechConfiguration> config)
     {
         var speechConfig = SpeechConfig.FromSubscription(config.Value.Key, config.Value.Region);
 
-        speechConfig.SpeechSynthesisVoiceName = "Pete Field_20250227_8588";
+        if (!string.IsNullOrWhiteSpace(config.Value.Voice))
+            speechConfig.SpeechSynthesisVoiceName = config.Value.Voice;
 
         _speechSynthesizer = new SpeechSynthesizer(speechConfig);
-
     }
-
-
-
 
     public async Task Say(string text)
     {

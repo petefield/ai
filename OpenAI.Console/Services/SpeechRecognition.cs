@@ -8,23 +8,24 @@ namespace OpenAI.Console.Services;
 internal class SpeechRecognition
 {
     private readonly SpeechRecognizer _speechRecognizer;
-
-    private readonly TaskCompletionSource _stop = new();
     private readonly KeywordRecognizer _keywordRecognizer;
     private readonly KeywordRecognitionModel _keywordModel;
+
+    public Action<SpeechRecognition, string>? OnSpeechRecognised { get; set; }
+    public Action<SpeechRecognition, string>? OnKeyWordRecognised { get; set; }
+    public Action<SpeechRecognition, string>? OnStateChanged { get; set; }
 
     public SpeechRecognition(IOptions<SpeechConfiguration> config)
     {
 
-        _keywordModel = KeywordRecognitionModel.FromFile(@"C:\Users\petef\source\repos\OpenAI\OpenAI.Console\kws.table");
+        _keywordModel = KeywordRecognitionModel.FromFile(@"C:\Users\N19284\source\ai\ai\OpenAI.Console\kws.table");
 
         var audioConfig = AudioConfig.FromDefaultMicrophoneInput();
-
-        _speechRecognizer = new SpeechRecognizer(
-             SpeechConfig.FromSubscription(config.Value.Key, config.Value.Region),
-             audioConfig);
+        var speechConfig = SpeechConfig.FromSubscription(config.Value.Key, config.Value.Region);
 
         _keywordRecognizer = new KeywordRecognizer(audioConfig);
+
+        _speechRecognizer = new SpeechRecognizer(speechConfig, audioConfig);
 
         _speechRecognizer.Recognized += (s, e) =>
         {
@@ -54,23 +55,33 @@ internal class SpeechRecognition
         };
     }
 
-    public Action<SpeechRecognition, string>? OnSpeechRecognised { get; set; }
-
-    public async Task StopListening()
-    {
-        await _speechRecognizer.StopContinuousRecognitionAsync();
-    }
-
-    public  Task StartListening()
+    public Task StartListeningForKeyWord()
     {
         var t = Task.Run(async () => {
             KeywordRecognitionResult result;
             do
             {
+                OnStateChanged?.Invoke(this, "Listening For Keyword");
+
                 result = await _keywordRecognizer.RecognizeOnceAsync(_keywordModel);
-            } while (result.Reason != ResultReason.RecognizedKeyword );
+
+            } while (result.Reason != ResultReason.RecognizedKeyword);
+
+            OnKeyWordRecognised?.Invoke(this, result.Text);
+
         });
 
-        return t.ContinueWith(_ => _speechRecognizer.StartContinuousRecognitionAsync());
+        return t;
+    }
+
+    public async Task PauseListening()
+    {
+        await _speechRecognizer.StopContinuousRecognitionAsync();
+        OnStateChanged?.Invoke(this, "Paused");
+    }
+
+    public async Task StartListening() {
+        await _speechRecognizer.StartContinuousRecognitionAsync();
+        OnStateChanged?.Invoke(this, "Listening");
     }
 }

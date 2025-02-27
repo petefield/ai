@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using OpenAI.Console;
 using SpeechToText;
 using OpenAI.Console.Services;
+using Microsoft.Extensions.Hosting;
 
 internal class ChatService : IStart
 {
@@ -37,33 +38,51 @@ internal class ChatService : IStart
 
         _chatCompletionOptions.Tools.AddRange(toolBelt.GetTools());
 
-        _speechRecognition.OnSpeechRecognised += async (s, e) =>
+        _speechRecognition.OnSpeechRecognised = async (s, e) =>
         {
+            await _speechRecognition.PauseListening();
             Console.Write(e);
             await Chat(e);
         };
+
+        _speechRecognition.OnKeyWordRecognised = async (s, e) => await DisplayAssistantMessage("Yes Sir?");
+
+        _speechRecognition.OnStateChanged = (s, e) => DisplayState(e);
     }
 
     public async Task Start()
     {
+        Console.WriteLine("Chat Service Started");
+        var welcomeMessage = "Hello Sir. If you need me, simply say 'Computer'.";
 
-        Console.Write("[USER]: ");
+        await DisplayAssistantMessage(welcomeMessage, false);
 
-        await _speechRecognition.StartListening();
+        await _speechRecognition.StartListeningForKeyWord();
 
         while (true)
         {
             await Chat(Console.ReadLine());
         }
     }
+    
     private async Task Chat(string? userInput)
     {
         if (string.IsNullOrEmpty(userInput))
             return;
 
+        if (string.Equals(userInput, "stop listening.", StringComparison.OrdinalIgnoreCase))
+        {
+            await DisplayAssistantMessage("Certainly Sir.", false);
+            await _speechRecognition.StartListeningForKeyWord();
+            return;
+        }
+
         _messages.Add(new UserChatMessage(userInput));
 
         ChatCompletion completion;
+
+        DisplayState("Working");
+
         do
         {
             completion = _client!.CompleteChat(_messages, _chatCompletionOptions);
@@ -72,21 +91,8 @@ internal class ChatService : IStart
             {
                 case ChatFinishReason.Stop:
                     _messages.Add(new AssistantChatMessage(completion));
-                    var responseText = completion.Content[0].Text;
+                    await DisplayAssistantMessage(completion.Content[0].Text);
 
-                    Console.WriteLine();
-                    Console.Write($"[ASSISTANT]: ");
-
-                    var oldConsoleColor = Console.ForegroundColor;
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"{responseText}");
-                    Console.ForegroundColor = oldConsoleColor;
-
-                    await _speechRecognition.StopListening();
-                    await _voice.Say(responseText);
-                    await _speechRecognition.StartListening();
-
-                    Console.Write("[USER]: ");
                     break;
 
                 case ChatFinishReason.ToolCalls:
@@ -94,6 +100,8 @@ internal class ChatService : IStart
 
                     foreach (ChatToolCall toolCall in completion.ToolCalls)
                     {
+                        DisplayState($"Calling Tool : {toolCall.FunctionName}");
+
                         var result = await _toolBelt.CallTool(toolCall);
                         _messages.Add(new ToolChatMessage(toolCall.Id, result));
                     }
@@ -106,6 +114,37 @@ internal class ChatService : IStart
 
         } while (completion.FinishReason != ChatFinishReason.Stop);
 
+    }
+
+    private async Task DisplayAssistantMessage(string message, bool resumeListening = true)
+    {
+        await _speechRecognition.PauseListening();
+        var oldConsoleColor = Console.ForegroundColor;
+        Console.WriteLine();
+        Console.Write($"[ASSISTANT]: ");
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine(message);
+        Console.ForegroundColor = oldConsoleColor;
+        DisplayState("Talking");
+        await _voice.Say(message);
+        if (resumeListening) {
+            Console.Write("[USER]: ");
+            await _speechRecognition.StartListening();
+        }
+    }
+
+    private void DisplayState(string state)
+    {
+        int x = Console.CursorLeft;
+        int y = Console.CursorTop;
+
+        var oldConsoleColor = Console.ForegroundColor;
+        Console.SetCursorPosition(0,0);      
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.Write(state.PadRight(50-state.Length));
+        Console.SetCursorPosition(x, y);
+
+        Console.ForegroundColor = oldConsoleColor;
     }
 
 }

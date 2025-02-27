@@ -13,7 +13,7 @@ using OpenAI.Console.Services;
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
-builder.Configuration.AddJsonFile("appsettings.Development.json");
+//builder.Configuration.AddJsonFile("appsettings.Development.json");
 builder.Configuration.AddUserSecrets<Program>();
 
 builder.Services.AddSingleton<LocationService>();
