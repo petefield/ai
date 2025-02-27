@@ -11,6 +11,7 @@
   <ItemGroup>
     <None Remove="appsettings.Development.json" />
     <None Remove="appsettings.json" />
+    <None Remove="kws.table" />
     <None Remove="SystemPrompt.txt" />
   </ItemGroup>
 
@@ -39,6 +40,12 @@
     <PackageReference Include="System.Speech" Version="9.0.2" />
     <PackageReference Include="OpenWeatherAPI" Version="1.0.2" />
 
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="kws.table">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
   </ItemGroup>
 
 </Project>
