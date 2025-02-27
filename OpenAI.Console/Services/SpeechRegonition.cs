@@ -10,12 +10,21 @@ internal class SpeechRecognition
     private readonly SpeechRecognizer _speechRecognizer;
 
     private readonly TaskCompletionSource _stop = new();
+    private readonly KeywordRecognizer _keywordRecognizer;
+    private readonly KeywordRecognitionModel _keywordModel;
 
     public SpeechRecognition(IOptions<SpeechConfiguration> config)
     {
+
+        _keywordModel = KeywordRecognitionModel.FromFile(@"C:\Users\petef\source\repos\OpenAI\OpenAI.Console\kws.table");
+
+        var audioConfig = AudioConfig.FromDefaultMicrophoneInput();
+
         _speechRecognizer = new SpeechRecognizer(
              SpeechConfig.FromSubscription(config.Value.Key, config.Value.Region),
-             AudioConfig.FromDefaultMicrophoneInput());
+             audioConfig);
+
+        _keywordRecognizer = new KeywordRecognizer(audioConfig);
 
         _speechRecognizer.Recognized += (s, e) =>
         {
@@ -52,8 +61,16 @@ internal class SpeechRecognition
         await _speechRecognizer.StopContinuousRecognitionAsync();
     }
 
-    public async Task StartListening()
+    public  Task StartListening()
     {
-        await _speechRecognizer.StartContinuousRecognitionAsync();
+        var t = Task.Run(async () => {
+            KeywordRecognitionResult result;
+            do
+            {
+                result = await _keywordRecognizer.RecognizeOnceAsync(_keywordModel);
+            } while (result.Reason != ResultReason.RecognizedKeyword );
+        });
+
+        return t.ContinueWith(_ => _speechRecognizer.StartContinuousRecognitionAsync());
     }
 }
