@@ -1,6 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
+using OpenAI.Console.Configuration;
 using Simple.HAApi;
-
 
 namespace OpenAI.Console.Services.HomeAssistant;
 
@@ -8,17 +9,18 @@ internal class HomeAssistantService
 {
     private readonly Instance instance;
 
-    public HomeAssistantService()
+    public HomeAssistantService(IOptions<HomeAssistantServiceConfiguration> homeAssistantServiceConfiguration)
     {
-        instance = new Instance(new Uri("http://pippin:8123"), "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZjQxNjM1ZDZiMjE0ZGViODYzYjMyZjQ1ODgwZDIwYyIsImlhdCI6MTc0MDQxMTg1MiwiZXhwIjoyMDU1NzcxODUyfQ.pQip37QkKCEc3WZnVwvV7HYZ2OwGWRoh-yvrj2O3LsY");
+        ArgumentException.ThrowIfNullOrWhiteSpace(homeAssistantServiceConfiguration.Value.Endpoint);
+        ArgumentException.ThrowIfNullOrWhiteSpace(homeAssistantServiceConfiguration.Value.Key);
+
+        instance = new Instance(new Uri(homeAssistantServiceConfiguration.Value.Endpoint), homeAssistantServiceConfiguration.Value.Key);
 
         instance.IgnoreCertificatErrors = true;
     }
 
     public async Task<string> GetConfig()
     {
-
-
         // Get a source
         var cfgSource = instance.Get<Simple.HAApi.Sources.Configuration>();
         // Get info as needed
@@ -28,7 +30,6 @@ internal class HomeAssistantService
         var s = JsonConvert.SerializeObject(entries);
 
         return s;
-
     }
 
     public async Task<string> GetServices()

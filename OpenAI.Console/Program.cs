@@ -30,6 +30,13 @@ builder.Services.AddOptions<SpeechConfiguration>()
 builder.Services.AddOptions<OpenAIConfiguration>()
     .Bind(builder.Configuration.GetSection(nameof(OpenAIConfiguration)));
 
+builder.Services.AddOptions<HomeAssistantServiceConfiguration>()
+    .Bind(builder.Configuration.GetSection(nameof(HomeAssistantServiceConfiguration)));
+
+builder.Services.AddOptions<WeatherServiceConfiguration>()
+    .Bind(builder.Configuration.GetSection(nameof(WeatherServiceConfiguration)));
+
+
 var host = builder.Build();
 
 

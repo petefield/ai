@@ -1,4 +1,6 @@
-﻿using OpenWeatherAPI;
+﻿using Microsoft.Extensions.Options;
+using OpenAI.Console.Configuration;
+using OpenWeatherAPI;
 using System.Net.Http.Json;
 
 namespace OpenAI.Console.Services.Weather;
@@ -7,14 +9,15 @@ internal class WeatherService
 {
     private readonly OpenWeatherApiClient openWeatherAPI;
 
-    public WeatherService()
+    public WeatherService(IOptions<WeatherServiceConfiguration> weatherServiceConfiguration )
     {
-        openWeatherAPI = new OpenWeatherAPI.OpenWeatherApiClient("f68bf144fb5ef874ba4c6fefc0506f6c");
+        ArgumentNullException.ThrowIfNull(weatherServiceConfiguration.Value.Key);
+
+        openWeatherAPI = new OpenWeatherAPI.OpenWeatherApiClient(weatherServiceConfiguration.Value.Key);
     }
 
     public async Task<WeatherData> GetWeatherData(string latitude, string longditude)
     {
-
         var httpClient = new HttpClient();
 
         try
