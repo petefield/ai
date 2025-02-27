@@ -4,13 +4,14 @@ using OpenAI.Console.Tools;
 using Microsoft.Extensions.Options;
 using OpenAI.Console;
 using SpeechToText;
+using OpenAI.Console.Services;
 
-internal class ChatService
+internal class ChatService : IStart
 {
     private readonly ToolBelt _toolBelt;
     private readonly Voice _voice;
     private readonly SpeechRecognition _speechRecognition;
-    private readonly List<ChatMessage> _messages = [];
+    private readonly List<ChatMessage> _messages;
     private readonly ChatClient? _client = null;
     private readonly ChatCompletionOptions _chatCompletionOptions = new();
 
@@ -19,6 +20,8 @@ internal class ChatService
         SpeechRecognition speechRecognition, 
         IOptions<OpenAIConfiguration> openAIConfiguration)
     {
+        ArgumentNullException.ThrowIfNull(openAIConfiguration.Value.Key);
+
         _toolBelt = toolBelt;
         _voice = voice;
         _speechRecognition = speechRecognition;
@@ -28,11 +31,9 @@ internal class ChatService
             credential: new ApiKeyCredential(openAIConfiguration.Value.Key)
         );
 
-        _messages.Add(new SystemChatMessage("""
-            You are a very rude, patroizing assistant. 
-            You speak like a pirate.
-            Keep your answers as short, snappy and rude as possible.
-         """));
+        var sp = File.ReadAllText("SystemPrompt.txt");
+
+        _messages =  [new SystemChatMessage(sp)];
 
         _chatCompletionOptions.Tools.AddRange(toolBelt.GetTools());
 
@@ -80,9 +81,9 @@ internal class ChatService
                     Console.WriteLine($"{responseText}");
                     Console.ForegroundColor = oldConsoleColor;
 
-                    await _speechRecognition.StopListening();
-                    await _voice.Say(responseText);
-                    await _speechRecognition.StartListening();
+             //       await _speechRecognition.StopListening();
+            //        await _voice.Say(responseText);
+             //       await _speechRecognition.StartListening();
 
                     Console.Write("[USER]: ");
                     break;

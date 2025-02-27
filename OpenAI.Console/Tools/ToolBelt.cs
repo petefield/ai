@@ -7,6 +7,7 @@ using System.Text.Json;
 
 using OpenAI.Console.Services.Location;
 using OpenAI.Console.Services.HomeAssistant;
+using OpenAI.Console.Services.Weather;
 namespace OpenAI.Console.Tools;
 
 internal class ToolBelt(LocationService locationService, WeatherService WeatherService, HomeAssistantService homeAssistantService)
@@ -25,7 +26,7 @@ internal class ToolBelt(LocationService locationService, WeatherService WeatherS
             foreach (var parameter in method.GetParameters())
             {
                 var parameterAttribute = parameter.GetCustomAttribute<ToolParameterAttribute>();
-                f.properties.Add(parameter.Name, new ToolParameterDescriptor(parameter.ParameterType.Name.ToLower(), parameterAttribute.Description));
+                f.properties.Add(parameter!.Name!, new ToolParameterDescriptor(parameter.ParameterType.Name.ToLower(), parameterAttribute!.Description));
             }
 
             var methodAttribute = method.GetCustomAttribute<ToolAttribute>();
@@ -34,7 +35,7 @@ internal class ToolBelt(LocationService locationService, WeatherService WeatherS
 
             yield return ChatTool.CreateFunctionTool(
                 functionName: method.Name,
-                functionDescription: methodAttribute.Description,
+                functionDescription: methodAttribute!.Description,
                 functionParameters: BinaryData.FromBytes(Encoding.UTF8.GetBytes(s)));
         }
 
@@ -48,7 +49,12 @@ internal class ToolBelt(LocationService locationService, WeatherService WeatherS
             var s = toolCall.FunctionArguments;
 
             using JsonDocument argumentsJson = JsonDocument.Parse(toolCall.FunctionArguments);
-            Dictionary<string, object> dict = JsonConvert.DeserializeObject<Dictionary<string, object>>(argumentsJson.RootElement.ToString());
+            Dictionary<string, object>? dict = JsonConvert.DeserializeObject<Dictionary<string, object>>(argumentsJson.RootElement.ToString());
+
+            if (dict is null)
+            {
+                return "Could not parse parametes";
+            }
 
             var t = typeof(ToolBelt);
 
@@ -56,10 +62,9 @@ internal class ToolBelt(LocationService locationService, WeatherService WeatherS
                .Where(m => m.GetCustomAttributes(typeof(ToolAttribute), false).Length > 0)
                .Where(m => m.Name == methodName).Single();
 
-            var parameters = method.GetParameters().Select(p => dict.TryGetValue(p.Name, out object parameterValue)
+            var parameters = method.GetParameters().Select(p => dict.TryGetValue(p!.Name!, out object? parameterValue)
                     ? Convert.ChangeType(parameterValue, p.ParameterType)
-                    : null
-        );
+                    : null);
 
             var result = await method.InvokeAsync(this, parameters.ToArray());
             return result?.ToString() ?? "Done.";
@@ -68,8 +73,6 @@ internal class ToolBelt(LocationService locationService, WeatherService WeatherS
         catch (Exception ex)
         {
             return $"Failed with message {ex.Message}";
-
-            throw ex;
         }
     }
 

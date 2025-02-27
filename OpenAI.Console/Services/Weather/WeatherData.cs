@@ -1,112 +1,87 @@
 ﻿using System;
 using System.Collections.Generic;
 
-public record WeatherData(
-    double Lat,
-    double Lon,
-    string Timezone,
-    int TimezoneOffset,
-    CurrentWeather Current,
-    List<MinutelyForecast> Minutely,
-    List<HourlyForecast> Hourly,
-    List<DailyForecast> Daily,
-    List<Alert> Alerts
-)
+
+public class Coord
 {
-    public override string ToString() => System.Text.Json.JsonSerializer.Serialize(this);
+    public double Lon { get; set; }
+    public double Lat { get; set; }
 }
 
-public record CurrentWeather(
-    long Dt,
-    long Sunrise,
-    long Sunset,
-    double Temp,
-    double FeelsLike,
-    int Pressure,
-    int Humidity,
-    double DewPoint,
-    double Uvi,
-    int Clouds,
-    int Visibility,
-    double WindSpeed,
-    int WindDeg,
-    double WindGust,
-    List<WeatherCondition> Weather
-);
+public class Weather
+{
+    public int Id { get; set; }
+    public string Main { get; set; }
+    public string Description { get; set; }
+    public string Icon { get; set; }
+}
 
-public record MinutelyForecast(
-    long Dt,
-    double Precipitation
-);
+public class Main
+{
+    public double Temp { get; set; }
+    public double FeelsLike { get; set; }
+    public double TempMin { get; set; }
+    public double TempMax { get; set; }
+    public int Pressure { get; set; }
+    public int Humidity { get; set; }
+    public int SeaLevel { get; set; }
+    public int GrndLevel { get; set; }
+}
 
-public record HourlyForecast(
-    long Dt,
-    double Temp,
-    double FeelsLike,
-    int Pressure,
-    int Humidity,
-    double DewPoint,
-    double Uvi,
-    int Clouds,
-    int Visibility,
-    double WindSpeed,
-    int WindDeg,
-    double WindGust,
-    List<WeatherCondition> Weather,
-    double Pop
-);
+public class Wind
+{
+    public double Speed { get; set; }
+    public int Deg { get; set; }
+    public double Gust { get; set; }
+}
 
-public record DailyForecast(
-    long Dt,
-    long Sunrise,
-    long Sunset,
-    long Moonrise,
-    long Moonset,
-    double MoonPhase,
-    string Summary,
-    Temperature Temp,
-    FeelsLike FeelsLike,
-    int Pressure,
-    int Humidity,
-    double DewPoint,
-    double WindSpeed,
-    int WindDeg,
-    double WindGust,
-    List<WeatherCondition> Weather,
-    int Clouds,
-    double Pop,
-    double? Rain,
-    double Uvi
-);
+public class Rain
+{
+    public double _oneHour { get; set; }
 
-public record Temperature(
-    double Day,
-    double Min,
-    double Max,
-    double Night,
-    double Eve,
-    double Morn
-);
+    // JSON property name is "1h", so we need to map it correctly
+    [Newtonsoft.Json.JsonProperty("1h")]
+    public double OneHour
+    {
+        get { return _oneHour; }
+        set { _oneHour = value; }
+    }
+}
 
-public record FeelsLike(
-    double Day,
-    double Night,
-    double Eve,
-    double Morn
-);
+public class Clouds
+{
+    public int All { get; set; }
+}
 
-public record WeatherCondition(
-    int Id,
-    string Main,
-    string Description,
-    string Icon
-);
+public class Sys
+{
+    public int Type { get; set; }
+    public int Id { get; set; }
+    public string Country { get; set; }
+    public long Sunrise { get; set; }
+    public long Sunset { get; set; }
+}
 
-public record Alert(
-    string SenderName,
-    string Event,
-    long Start,
-    long End,
-    string Description,
-    List<string> Tags
-);
+public class WeatherData
+{
+    public Coord Coord { get; set; }
+    public List<Weather> Weather { get; set; }
+    public string Base { get; set; }
+    public Main Main { get; set; }
+    public int Visibility { get; set; }
+    public Wind Wind { get; set; }
+    public Rain Rain { get; set; }
+    public Clouds Clouds { get; set; }
+    public long Dt { get; set; }
+    public Sys Sys { get; set; }
+    public int Timezone { get; set; }
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public int Cod { get; set; }
+
+
+    public override string ToString()
+    {
+        return System.Text.Json.JsonSerializer.Serialize(this);
+    }
+}

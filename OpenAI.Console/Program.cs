@@ -1,18 +1,22 @@
-﻿using Microsoft.Extensions.Hosting;
-using OpenAI.Console.Services.Location;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using OpenAI.Console;
+using OpenAI.Console.Configuration;
 using OpenAI.Console.Tools;
 using OpenAI.Console.Services.HomeAssistant;
+using OpenAI.Console.Services.Location;
+using OpenAI.Console.Services.Weather;
+
 using SpeechToText;
-using Microsoft.Extensions.Configuration;
-using OpenAI.Console.Configuration;
-using OpenAI.Console;
+using OpenAI.Console.Services;
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
+builder.Configuration.AddJsonFile("appsettings.Development.json");
 builder.Configuration.AddUserSecrets<Program>();
 
-builder.Services.AddHttpClient<LocationService>();
+builder.Services.AddSingleton<LocationService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddSingleton<WeatherService>();
 builder.Services.AddSingleton<HomeAssistantService>();
@@ -21,17 +25,15 @@ builder.Services.AddSingleton<Voice>();
 builder.Services.AddSingleton<SpeechRecognition>();
 
 builder.Services.AddOptions<SpeechConfiguration>()
-            .Bind(builder.Configuration.GetSection(nameof(SpeechConfiguration)));
+    .Bind(builder.Configuration.GetSection(nameof(SpeechConfiguration)));
 
 builder.Services.AddOptions<OpenAIConfiguration>()
-            .Bind(builder.Configuration.GetSection(nameof(OpenAIConfiguration)));
+    .Bind(builder.Configuration.GetSection(nameof(OpenAIConfiguration)));
 
-using IHost host = builder.Build();
+var host = builder.Build();
 
-var chatService  = host.Services.GetRequiredService<ChatService>();
 
-await chatService.Start();
-
+await host.RunService<ChatService>();
 
 
 
