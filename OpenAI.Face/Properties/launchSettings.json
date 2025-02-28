@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "OpenAI.Face": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

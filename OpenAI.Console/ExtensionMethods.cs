@@ -31,8 +31,8 @@ public static class ExtensionMethods
 
     public static Task RunService<TService>(this IHost host) where TService : IStart
         => host.Services.GetRequiredService<TService>().Start();
-
 }
+
 public interface IStart
 {
     Task Start();

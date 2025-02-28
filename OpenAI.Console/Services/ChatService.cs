@@ -6,6 +6,8 @@ using OpenAI.Console;
 using SpeechToText;
 using OpenAI.Console.Services;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.CognitiveServices.Speech;
 
 internal class ChatService : IStart
 {
@@ -15,6 +17,7 @@ internal class ChatService : IStart
     private readonly List<ChatMessage> _messages;
     private readonly ChatClient? _client = null;
     private readonly ChatCompletionOptions _chatCompletionOptions = new();
+    private readonly HubConnection _connection;
 
     public ChatService(ToolBelt toolBelt,
         Voice voice,
@@ -47,11 +50,32 @@ internal class ChatService : IStart
 
         _speechRecognition.OnKeyWordRecognised = async (s, e) => await DisplayAssistantMessage("Yes Sir?");
 
-        _speechRecognition.OnStateChanged = (s, e) => DisplayState(e);
+        _speechRecognition.OnStateChanged = async (s, e) => await DisplayState(e);
+
+        _connection = new HubConnectionBuilder()
+               .WithUrl("http://localhost:5057/OpenAIAssitantHub")
+               .Build();
     }
 
     public async Task Start()
     {
+        var connectionAttempts = 0;
+
+        while (connectionAttempts <= 50)
+        {
+            try
+            {
+                await _connection.StartAsync();
+                break;
+            }
+            catch (Exception)
+            {
+            }
+            await Task.Delay(500);
+            connectionAttempts++;
+        }
+
+
         Console.WriteLine("Chat Service Started");
         var welcomeMessage = "Hello Sir. If you need me, simply say 'Computer'.";
 
@@ -81,7 +105,7 @@ internal class ChatService : IStart
 
         ChatCompletion completion;
 
-        DisplayState("Working");
+        await DisplayState("Working");
 
         do
         {
@@ -100,7 +124,7 @@ internal class ChatService : IStart
 
                     foreach (ChatToolCall toolCall in completion.ToolCalls)
                     {
-                        DisplayState($"Calling Tool : {toolCall.FunctionName}");
+                        await DisplayState($"Calling Tool : {toolCall.FunctionName}");
 
                         var result = await _toolBelt.CallTool(toolCall);
                         _messages.Add(new ToolChatMessage(toolCall.Id, result));
@@ -125,7 +149,7 @@ internal class ChatService : IStart
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine(message);
         Console.ForegroundColor = oldConsoleColor;
-        DisplayState("Talking");
+        await DisplayState("Talking");
         await _voice.Say(message);
         if (resumeListening) {
             Console.Write("[USER]: ");
@@ -133,8 +157,18 @@ internal class ChatService : IStart
         }
     }
 
-    private void DisplayState(string state)
+    private async Task DisplayState(string state)
     {
+        try
+        {
+            await _connection.InvokeAsync("StateChanged", state);
+
+        }
+        catch (Exception)
+        {
+
+        }
+
         int x = Console.CursorLeft;
         int y = Console.CursorTop;
 
@@ -143,7 +177,7 @@ internal class ChatService : IStart
         Console.ForegroundColor = ConsoleColor.Green;
         Console.Write(state.PadRight(50-state.Length));
         Console.SetCursorPosition(x, y);
-
+        
         Console.ForegroundColor = oldConsoleColor;
     }
 
