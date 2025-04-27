@@ -5,15 +5,16 @@ using Microsoft.Extensions.Options;
 using OpenAI.Console;
 using SpeechToText;
 using OpenAI.Console.Services;
-using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.SignalR.Client;
+using OpenAI;
+using System.Net;
 using Microsoft.CognitiveServices.Speech;
+using SignalRChat.Hubs;
 
 internal class ChatService : IStart
 {
     private readonly ToolBelt _toolBelt;
     private readonly Voice _voice;
-    private readonly SpeechRecognition _speechRecognition;
     private readonly List<ChatMessage> _messages;
     private readonly ChatClient? _client = null;
     private readonly ChatCompletionOptions _chatCompletionOptions = new();
@@ -21,18 +22,24 @@ internal class ChatService : IStart
 
     public ChatService(ToolBelt toolBelt,
         Voice voice,
-        SpeechRecognition speechRecognition,
         IOptions<OpenAIConfiguration> openAIConfiguration)
     {
         ArgumentNullException.ThrowIfNull(openAIConfiguration.Value.Key);
 
         _toolBelt = toolBelt;
         _voice = voice;
-        _speechRecognition = speechRecognition;
+
+        var options = new OpenAIClientOptions();
+
+        if (openAIConfiguration.Value.Endpoint is not null)
+        {
+            options.Endpoint = new(openAIConfiguration.Value.Endpoint);
+        }
 
         _client = new(
             model: openAIConfiguration.Value.Model,
-            credential: new ApiKeyCredential(openAIConfiguration.Value.Key)
+            credential: new ApiKeyCredential(openAIConfiguration.Value.Key),
+            options
         );
 
         var sp = File.ReadAllText("SystemPrompt.txt");
@@ -41,23 +48,12 @@ internal class ChatService : IStart
 
         _chatCompletionOptions.Tools.AddRange(toolBelt.GetTools());
 
-        _speechRecognition.OnSpeechRecognised = async (s, e) =>
-        {
-            await _speechRecognition.PauseListening();
-            Console.Write(e);
-            await Chat(e);
-        };
-
-        _speechRecognition.OnKeyWordRecognised = async (s, e) => await DisplayAssistantMessage("Yes Sir?");
-
-        _speechRecognition.OnStateChanged = async (s, e) => await DisplayState(e);
-
         _connection = new HubConnectionBuilder()
-               .WithUrl("http://localhost:5057/OpenAIAssitantHub")
-               .Build();
+            .WithUrl("http://localhost:5057/OpenAIAssitantHub")
+            .Build();
     }
 
-    public async Task Start()
+    private async Task ConnectToHub()
     {
         var connectionAttempts = 0;
 
@@ -74,38 +70,32 @@ internal class ChatService : IStart
             await Task.Delay(500);
             connectionAttempts++;
         }
+    }
 
+    public async Task Start()
+    {
+        await ConnectToHub();
+
+        _connection.On<string>(OpenAIAssitantHub.UserInputReceivedEvent, SendChatMessage);
 
         Console.WriteLine("Chat Service Started");
-        var welcomeMessage = "Hello Sir. If you need me, simply say 'Computer'.";
+        await DisplayAssistantResponse("Hi.");
 
-        await DisplayAssistantMessage(welcomeMessage, false);
-
-        await _speechRecognition.StartListeningForKeyWord();
-
-        while (true)
-        {
-            await Chat(Console.ReadLine());
-        }
+        Console.ReadLine();
     }
     
-    private async Task Chat(string? userInput)
+    private async Task SendChatMessage(string? userInput)
     {
+        Console.Write($"[User]: {userInput}");
+
         if (string.IsNullOrEmpty(userInput))
             return;
-
-        if (string.Equals(userInput, "stop listening.", StringComparison.OrdinalIgnoreCase))
-        {
-            await DisplayAssistantMessage("Certainly Sir.", false);
-            await _speechRecognition.StartListeningForKeyWord();
-            return;
-        }
 
         _messages.Add(new UserChatMessage(userInput));
 
         ChatCompletion completion;
 
-        await DisplayState("Working");
+        await SetState(JeevesState.Thinking);
 
         do
         {
@@ -115,8 +105,7 @@ internal class ChatService : IStart
             {
                 case ChatFinishReason.Stop:
                     _messages.Add(new AssistantChatMessage(completion));
-                    await DisplayAssistantMessage(completion.Content[0].Text);
-
+                    await DisplayAssistantResponse(completion.Content[0].Text);
                     break;
 
                 case ChatFinishReason.ToolCalls:
@@ -124,8 +113,7 @@ internal class ChatService : IStart
 
                     foreach (ChatToolCall toolCall in completion.ToolCalls)
                     {
-                        await DisplayState($"Calling Tool : {toolCall.FunctionName}");
-
+                        await SetState(JeevesState.Processing);
                         var result = await _toolBelt.CallTool(toolCall);
                         _messages.Add(new ToolChatMessage(toolCall.Id, result));
                     }
@@ -137,49 +125,47 @@ internal class ChatService : IStart
             }
 
         } while (completion.FinishReason != ChatFinishReason.Stop);
-
     }
 
-    private async Task DisplayAssistantMessage(string message, bool resumeListening = true)
+    private async Task DisplayAssistantResponse(string message)
     {
-        await _speechRecognition.PauseListening();
+        var t = Say(message);
         var oldConsoleColor = Console.ForegroundColor;
         Console.WriteLine();
-        Console.Write($"[ASSISTANT]: ");
+        Console.Write($"[JEEVES]: ");
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine(message);
         Console.ForegroundColor = oldConsoleColor;
-        await DisplayState("Talking");
-        await _voice.Say(message);
-        if (resumeListening) {
-            Console.Write("[USER]: ");
-            await _speechRecognition.StartListening();
-        }
+        await t;
     }
 
-    private async Task DisplayState(string state)
+    public async Task Say(string message)
+    { 
+        await SetState(JeevesState.Speaking);
+        await _voice.Say(message);
+        await SetState(JeevesState.Listening);
+    }
+
+    private async Task SetState(JeevesState state)
     {
         try
         {
             await _connection.InvokeAsync("StateChanged", state);
-
         }
         catch (Exception)
         {
 
         }
 
-        int x = Console.CursorLeft;
-        int y = Console.CursorTop;
+        //int x = Console.CursorLeft;
+        //int y = Console.CursorTop;
 
-        var oldConsoleColor = Console.ForegroundColor;
-        Console.SetCursorPosition(0,0);      
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.Write(state.PadRight(50-state.Length));
-        Console.SetCursorPosition(x, y);
-        
-        Console.ForegroundColor = oldConsoleColor;
+        //var oldConsoleColor = Console.ForegroundColor;
+        //Console.SetCursorPosition(0,0);      
+        //Console.ForegroundColor = ConsoleColor.Green;
+        //Console.Write(state.ToString().PadRight(50-state.ToString().Length));
+        //Console.SetCursorPosition(x, y);
+        //Console.ForegroundColor = oldConsoleColor;
     }
-
 }
 

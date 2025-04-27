@@ -1,9 +1,8 @@
 ﻿using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
 using Microsoft.Extensions.Options;
-using OpenAI.Console.Configuration;
 
-namespace OpenAI.Console.Services;
+namespace Jeeves.VoiceRecognition;
 
 internal class SpeechRecognition
 {
@@ -18,7 +17,7 @@ internal class SpeechRecognition
     public SpeechRecognition(IOptions<SpeechConfiguration> config)
     {
 
-        _keywordModel = KeywordRecognitionModel.FromFile(@"C:\Users\N19284\source\ai\ai\OpenAI.Console\kws.table");
+        _keywordModel = KeywordRecognitionModel.FromFile(@"C:\Users\N19284\source\ai\ai\OpenAI.Console\7981dc85-1438-4f2c-9445-2b62f51e7a44.table");
 
         var audioConfig = AudioConfig.FromDefaultMicrophoneInput();
         var speechConfig = SpeechConfig.FromSubscription(config.Value.Key, config.Value.Region);
@@ -38,26 +37,27 @@ internal class SpeechRecognition
             }
             else if (e.Result.Reason == ResultReason.NoMatch)
             {
-                System.Console.WriteLine($"NOMATCH: Speech could not be recognized.");
+                Console.WriteLine($"NOMATCH: Speech could not be recognized.");
             }
         };
 
         _speechRecognizer.Canceled += (s, e) =>
         {
-            System.Console.WriteLine($"CANCELED: Reason={e.Reason}");
+            Console.WriteLine($"CANCELED: Reason={e.Reason}");
 
             if (e.Reason == CancellationReason.Error)
             {
-                System.Console.WriteLine($"CANCELED: ErrorCode={e.ErrorCode}");
-                System.Console.WriteLine($"CANCELED: ErrorDetails={e.ErrorDetails}");
-                System.Console.WriteLine($"CANCELED: Did you set the speech resource key and region values?");
+                Console.WriteLine($"CANCELED: ErrorCode={e.ErrorCode}");
+                Console.WriteLine($"CANCELED: ErrorDetails={e.ErrorDetails}");
+                Console.WriteLine($"CANCELED: Did you set the speech resource key and region values?");
             }
         };
     }
 
     public Task StartListeningForKeyWord()
     {
-        var t = Task.Run(async () => {
+        var t = Task.Run(async () =>
+        {
             KeywordRecognitionResult result;
             do
             {
@@ -80,8 +80,17 @@ internal class SpeechRecognition
         OnStateChanged?.Invoke(this, "Paused");
     }
 
-    public async Task StartListening() {
-        await _speechRecognizer.StartContinuousRecognitionAsync();
-        OnStateChanged?.Invoke(this, "Listening");
+    public async Task StartListening()
+    {
+        try
+        {
+            await _speechRecognizer.StartContinuousRecognitionAsync();
+            OnStateChanged?.Invoke(this, "Listening");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+
     }
 }

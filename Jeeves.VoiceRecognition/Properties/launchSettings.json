@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Jeeves.VoiceRecognition": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

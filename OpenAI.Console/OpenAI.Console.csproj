@@ -41,6 +41,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Jeeves.Shared\Jeeves.Shared.csproj" />
+    <ProjectReference Include="..\OpenAi.Hub\OpenAi.Hub.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="kws.table">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
